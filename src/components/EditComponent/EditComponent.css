@@ -1,0 +1,12 @@
+label{
+    font-size: 20px;
+    font-weight: bold;
+  }
+  input[type="text"]{
+    border:2px solid rgb(155, 153, 153);
+  }
+  textarea{
+    border:2px solid rgb(155, 153, 153);
+  }
+  
+  
