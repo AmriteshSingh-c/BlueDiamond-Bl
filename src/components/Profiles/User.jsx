@@ -5,7 +5,7 @@ import { EditComponent } from "../EditComponent/EditComponent";
 
 const User = () => {
   const { user } = UserAuth();
-  if (user && (user.email === "preethi.bdl@gmail.com"||user.email==="ram.bdl@gmail.com")) {
+  if (user && (user.email === "preethi.bdl@gmail.com"||user.email==="ram.bdl@gmail.com"||user.email==="prajyot.bdl@gmail.com")) {
     return (
       <div>
         <div>

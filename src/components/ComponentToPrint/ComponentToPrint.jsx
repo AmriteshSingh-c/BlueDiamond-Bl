@@ -49,6 +49,18 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         alt="unable"
         hidden={hidden}
       ></img>
+      <div hidden = {hidden}
+      style={{
+        fontFamily: "Arial,Helvetica ,sans-serif   ",
+        color: "#757575",
+        
+      }}
+       className="text-center text-[14px]  h-[18px] w-[355px]  bg-white absolute top-[303px] left-[402px]">
+          <span className="opacity-80  font-[795] ">MTO / DGS / 2775 / AUG / 2028</span> 
+          </div>
+
+
+
       {hidden === false ? (
         typeText === "bl" ? (
           <div className="text-center text-[15px] text-bold h-[18px] w-[150px]  bg-white absolute top-[19px] left-[580px]">
