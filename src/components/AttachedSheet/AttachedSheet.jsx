@@ -9,20 +9,22 @@ export const AttachedSheet = React.forwardRef((props, ref) => {
     PortOfLoading,
     PortOfDischarge,
     sign,
+    sheetNumber = 1,
+    sheetTotal = 1,
   } = props;
   return (
     <div
       ref={ref}
-      className="relative text-[10px] font-bold"
+      className="relative overflow-hidden bg-white text-[10px] font-bold"
       style={{ width: "21cm", height: "29.7cm" }}
     >
       <img src={img} className="w-full h-full " alt="unable"></img>
 
       <div className="absolute top-[57.5px] left-[663px]">
-        <p>2</p>
+        <p>{sheetNumber}</p>
       </div>
       <div className="absolute top-[57.5px] left-[690px]">
-        <p>2</p>
+        <p>{sheetTotal}</p>
       </div>
       <div className="absolute top-[113px] left-[550px]">
         <p>{PortOfDischarge}</p>

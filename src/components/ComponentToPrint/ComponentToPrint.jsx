@@ -1,6 +1,45 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import img from "../../outline_page.jpg";
 import signImg from "../../Sign_page-0001.jpg";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase";
+
+const DEFAULT_LAYOUT = {
+  MTDNo: { top: 48, left: 600 },
+  ShipmentRef: { top: 72, left: 600 },
+  Consignor: { top: 72, left: 20 },
+  Consignee: { top: 157, left: 20 },
+  NotifyParty: { top: 239, left: 20 },
+  PlaceOfAcceptance: { top: 325, left: 20 },
+  DateOfAcceptance: { top: 325, left: 250 },
+  PortOfLoading: { top: 365, left: 20 },
+  PortOfDischarge: { top: 365, left: 203 },
+  VesselVoyage: { top: 403, left: 20 },
+  PlaceOfDelivery: { top: 440, left: 20 },
+  DateOfDelivery: { top: 440, left: 250 },
+  ModeOfTransport: { top: 440, left: 400 },
+  Route: { top: 440, left: 590 },
+  ContainerNo: { top: 488, left: 20 },
+  Marks: { top: 488, left: 135 },
+  Description: { top: 492, left: 285 },
+  GrossWeight: { top: 486, left: 555 },
+  Measurement: { top: 486, left: 685 },
+  DeliveryAgent: { top: 874, left: 20 },
+  FreightAmount: { top: 872, left: 400 },
+  NumberOfBl: { top: 874, left: 575 },
+  PlaceAndDate: { top: 873, left: 635 },
+  FreightPayable: { top: 930, left: 400 },
+};
+
+const getStoredTemplateConfig = () => {
+  try {
+    const saved = localStorage.getItem("blueDiamondBillTemplate");
+    return saved ? JSON.parse(saved) : null;
+  } catch (error) {
+    return null;
+  }
+};
+
 export const ComponentToPrint = React.forwardRef((props, ref) => {
   const {
     Consignee,
@@ -30,7 +69,46 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
     hidden,
     sign,
     typeText,
+    templateImage,
+    layout,
   } = props;
+
+  const [activeTemplate, setActiveTemplate] = useState(templateImage || img);
+  const [activeLayout, setActiveLayout] = useState({ ...DEFAULT_LAYOUT, ...(layout || {}) });
+
+  useEffect(() => {
+    const currentLayout = { ...DEFAULT_LAYOUT, ...(layout || {}) };
+    setActiveLayout(currentLayout);
+    if (templateImage) {
+      setActiveTemplate(templateImage);
+      return;
+    }
+
+    const fetchTemplate = async () => {
+      if (db) {
+        const savedTemplate = await getDoc(doc(db, "systemSettings", "billTemplate"));
+        if (savedTemplate.exists()) {
+          const data = savedTemplate.data();
+          if (data?.image) setActiveTemplate(data.image);
+          if (data?.layout) setActiveLayout({ ...DEFAULT_LAYOUT, ...data.layout });
+        }
+      }
+
+      const localTemplate = getStoredTemplateConfig();
+      if (localTemplate?.image) setActiveTemplate(localTemplate.image);
+      if (localTemplate?.layout) setActiveLayout({ ...DEFAULT_LAYOUT, ...localTemplate.layout });
+    };
+
+    fetchTemplate();
+  }, [layout, templateImage]);
+
+  const fieldPosition = (fieldName) => {
+    const position = activeLayout[fieldName] || DEFAULT_LAYOUT[fieldName] || { top: 0, left: 0 };
+    return {
+      top: `${position.top}px`,
+      left: `${position.left}px`,
+    };
+  };
 
   return (
     <div
@@ -39,7 +117,7 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
       style={{ width: "21cm", height: "29.7cm" }}
     >
       <img
-        src={img}
+        src={activeTemplate || img}
         className="w-full h-full "
         alt="unable"
         hidden={hidden}
@@ -60,15 +138,16 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         <div className=" text-center text-[15px] text-bold h-[18px] w-[150px]  bg-white absolute top-[19px] left-[580px]"></div>
       )}
 
-      <div className="absolute top-[48px] left-[600px]">
+      <div className="absolute" style={{ ...fieldPosition("MTDNo") }}>
         <p>{MTDNo}</p>
       </div>
-      <div className="absolute top-[72px] left-[600px]">
+      <div className="absolute" style={{ ...fieldPosition("ShipmentRef") }}>
         <p>{ShipmentRef}</p>
       </div>
       <div
-        className="absolute top-[72px] left-[20px]"
+        className="absolute"
         style={{
+          ...fieldPosition("Consignor"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -77,8 +156,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {Consignor}
       </div>
       <div
-        className="absolute top-[157px] left-[20px]"
+        className="absolute"
         style={{
+          ...fieldPosition("Consignee"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -87,8 +167,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {Consignee}
       </div>
       <div
-        className="absolute top-[239px] left-[20px]"
+        className="absolute"
         style={{
+          ...fieldPosition("NotifyParty"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -97,36 +178,37 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {NotifyParty}
       </div>
 
-      <div className="absolute top-[325px] left-[20px]">
+      <div className="absolute" style={{ ...fieldPosition("PlaceOfAcceptance") }}>
         <p>{PlaceOfAcceptance}</p>
       </div>
-      <div className="absolute top-[325px] left-[250px]">
+      <div className="absolute" style={{ ...fieldPosition("DateOfAcceptance") }}>
         <p>{DateOfAcceptance}</p>
       </div>
-      <div className="absolute top-[365px] left-[20px]">
+      <div className="absolute" style={{ ...fieldPosition("PortOfLoading") }}>
         <p>{PortOfLoading}</p>
       </div>
-      <div className="absolute top-[365px] left-[203px]">
+      <div className="absolute" style={{ ...fieldPosition("PortOfDischarge") }}>
         <p>{PortOfDischarge}</p>
       </div>
-      <div className="absolute top-[403px] left-[20px]">
+      <div className="absolute" style={{ ...fieldPosition("VesselVoyage") }}>
         <p>{VesselVoyage}</p>
       </div>
-      <div className="absolute top-[440px] left-[20px]">
+      <div className="absolute" style={{ ...fieldPosition("PlaceOfDelivery") }}>
         <p>{PlaceOfDelivery}</p>
       </div>
-      <div className="absolute top-[440px] left-[250px]">
+      <div className="absolute" style={{ ...fieldPosition("DateOfDelivery") }}>
         <p>{DateOfDelivery}</p>
       </div>
-      <div className="absolute top-[440px] left-[400px]">
+      <div className="absolute" style={{ ...fieldPosition("ModeOfTransport") }}>
         <p>{ModeOfTransport}</p>
       </div>
-      <div className="absolute top-[440px] left-[590px]">
+      <div className="absolute" style={{ ...fieldPosition("Route") }}>
         <p>{Route}</p>
       </div>
       <div
-        className="absolute top-[488px] left-[20px]"
+        className="absolute"
         style={{
+          ...fieldPosition("ContainerNo"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -135,8 +217,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {ContainerNo}
       </div>
       <div
-        className="absolute top-[488px] left-[135px]"
+        className="absolute"
         style={{
+          ...fieldPosition("Marks"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -145,8 +228,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {Marks}
       </div>
       <div
-        className="absolute top-[492px] left-[285px]"
+        className="absolute"
         style={{
+          ...fieldPosition("Description"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -155,8 +239,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {Description}
       </div>
       <div
-        className="absolute top-[486px] left-[555px]"
+        className="absolute"
         style={{
+          ...fieldPosition("GrossWeight"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -165,8 +250,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {GrossWeight}
       </div>
       <div
-        className="absolute top-[486px] left-[685px]"
+        className="absolute"
         style={{
+          ...fieldPosition("Measurement"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -175,8 +261,9 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
         {Measurement}
       </div>
       <div
-        className="absolute top-[874px] left-[20px]"
+        className="absolute"
         style={{
+          ...fieldPosition("DeliveryAgent"),
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           textAlign: "left",
@@ -184,16 +271,16 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
       >
         {DeliveryAgent}
       </div>
-      <div className="absolute top-[872px] left-[400px]">
+      <div className="absolute" style={{ ...fieldPosition("FreightAmount") }}>
         <p>{FreightAmount}</p>
       </div>
-      <div className="absolute top-[874px] left-[575px]">
+      <div className="absolute" style={{ ...fieldPosition("NumberOfBl") }}>
         <p>{NumberOfBl}</p>
       </div>
-      <div className="absolute top-[873px] left-[635px]">
+      <div className="absolute" style={{ ...fieldPosition("PlaceAndDate") }}>
         <p>{PlaceAndDate}</p>
       </div>
-      <div className="absolute top-[930px] left-[400px]">
+      <div className="absolute" style={{ ...fieldPosition("FreightPayable") }}>
         <p>{FreightPayable}</p>
       </div>
       {sign === "true" && (

@@ -17,18 +17,24 @@ const Account = () => {
   };
 
   return (
-    <div className="w-full flex flex-row justify-around my-16 p-4">
-      <p className="font-bold">
-        <span className="text-3xl text-blue-800">WELCOME </span>
-        <span className="font-extrabold">{user && user.email}</span>
-      </p>
+    <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+            Logged in as
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">
+            <span className="text-blue-700">Welcome</span> {user && user.email}
+          </p>
+        </div>
 
-      <button
-        onClick={handleLogout}
-        className="font-bold border-2 bg-blue-500 px-6 py-2 my-4"
-      >
-        Logout
-      </button>
+        <button
+          onClick={handleLogout}
+          className="secondary-button"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   );
 };
