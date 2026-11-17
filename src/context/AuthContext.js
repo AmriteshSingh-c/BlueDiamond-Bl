@@ -5,7 +5,8 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { auth } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 const defaultAuthContext = {
   user: null,
@@ -79,6 +80,39 @@ const persistUsers = (users) => {
   localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
 };
 
+const syncAppUserRecord = async (email, role, password = "") => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return;
+  }
+
+  const users = getStoredUsers();
+  const existingIndex = users.findIndex((entry) => normalizeEmail(entry.email) === normalizedEmail);
+  const passwordHash = password ? await hashPassword(password) : users[existingIndex]?.passwordHash;
+  const nextUsers = [...users];
+
+  if (existingIndex >= 0) {
+    nextUsers[existingIndex] = {
+      ...nextUsers[existingIndex],
+      email: normalizedEmail,
+      role,
+      ...(passwordHash ? { passwordHash } : {}),
+    };
+  } else {
+    nextUsers.push({ email: normalizedEmail, role, passwordHash: passwordHash || "" });
+  }
+
+  persistUsers(nextUsers);
+
+  if (db) {
+    await setDoc(doc(db, "appUsers", normalizedEmail), {
+      email: normalizedEmail,
+      role,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+};
+
 const determineUserRole = (email, fallback = "user") => {
   const normalizedEmail = normalizeEmail(email);
   const storedUsers = getStoredUsers();
@@ -119,7 +153,9 @@ export const AuthContextProvider = ({ children }) => {
       return { user: { email: normalizedEmail, uid: `local-${normalizedEmail}`, role } };
     }
 
-    return createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    const result = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    await syncAppUserRecord(normalizedEmail, role, password);
+    return result;
   };
 
   const updateUser = async (email, updates = {}) => {
@@ -136,14 +172,24 @@ export const AuthContextProvider = ({ children }) => {
 
     const nextUsers = [...users];
     const current = nextUsers[index];
-    nextUsers[index] = {
+    const nextUser = {
       ...current,
       ...updates,
       email: normalizedEmail,
       ...(updates.password && { passwordHash: await hashPassword(updates.password) }),
     };
+    nextUsers[index] = nextUser;
     persistUsers(nextUsers);
-    return nextUsers[index];
+
+    if (db && nextUser.role) {
+      await setDoc(doc(db, "appUsers", normalizedEmail), {
+        email: normalizedEmail,
+        role: nextUser.role,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    return nextUser;
   };
 
   const removeUser = async (email) => {
@@ -158,6 +204,19 @@ export const AuthContextProvider = ({ children }) => {
       throw new Error("User not found.");
     }
     persistUsers(filtered);
+
+    if (db) {
+      try {
+        await setDoc(doc(db, "appUsers", normalizedEmail), {
+          email: normalizedEmail,
+          deleted: true,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Unable to update user profile record", error);
+      }
+    }
+
     return filtered;
   };
 
