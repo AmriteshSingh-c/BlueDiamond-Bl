@@ -4,9 +4,11 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  deleteUser as deleteFirebaseUser,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "../firebase";
 
 const defaultAuthContext = {
   user: null,
@@ -239,6 +241,14 @@ export const AuthContextProvider = ({ children }) => {
     if (filtered.length === users.length) {
       throw new Error("User not found.");
     }
+
+    const currentAuthUserEmail = normalizeEmail(auth?.currentUser?.email || "");
+    if (auth && currentAuthUserEmail === normalizedEmail) {
+      await deleteFirebaseUser(auth.currentUser);
+      await signOut(auth);
+      setUser(null);
+    }
+
     persistUsers(filtered);
 
     if (db) {
@@ -250,6 +260,19 @@ export const AuthContextProvider = ({ children }) => {
         });
       } catch (error) {
         console.error("Unable to update user profile record", error);
+      }
+    }
+
+    if (functions && currentAuthUserEmail !== normalizedEmail) {
+      try {
+        const deleteUserCallable = httpsCallable(functions, "deleteUserAccount");
+        const result = await deleteUserCallable({ email: normalizedEmail });
+        if (!result?.data?.success) {
+          throw new Error("Backend delete failed.");
+        }
+      } catch (error) {
+        console.error("Firebase backend delete failed", error);
+        throw error;
       }
     }
 
