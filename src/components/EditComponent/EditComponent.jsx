@@ -1,5 +1,5 @@
 import "./EditComponent.css";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import React, { useRef, useEffect } from "react";
 import { UserAuth } from "../../context/AuthContext";
 import {
@@ -55,7 +55,6 @@ export const EditComponent = ({ selectedJobNo }) => {
   const attachedSheetsRef = useRef();
   const [BlDrafts, setBlDrafts] = useState([]);
   const [SearchText, setSearchText] = useState("");
-  const [CurrBl, setCurrBl] = useState({});
 
   const normalizeConsignorKey = (value) => {
     const normalized = (value || "").trim().toLowerCase();
@@ -99,13 +98,6 @@ export const EditComponent = ({ selectedJobNo }) => {
       ...prev,
       [fieldName]: mergedValues,
     }));
-  };
-
-  const handleSuggestionFieldChange = async (fieldName, setter, value) => {
-    setter(value);
-    if (fieldName) {
-      await saveConsignorFieldSuggestion(fieldName, value);
-    }
   };
 
   const normalizeAttachedSheets = (value) => {
@@ -249,24 +241,7 @@ export const EditComponent = ({ selectedJobNo }) => {
     return undefined;
   }, [Consignor]);
 
-  useEffect(() => {
-    if (selectedJobNo) {
-      setSearchText(selectedJobNo);
-      loadDraftByJobNo(selectedJobNo);
-    }
-  }, [selectedJobNo, BlDrafts]);
-  const handleBl = () => {
-    setTypeText("bl");
-  };
-
-  const handleOriginal = () => {
-    setTypeText("original");
-  };
-  const handleNegotiable = () => {
-    setTypeText("");
-  };
-
-  const loadDraftByJobNo = (jobNo) => {
+  const loadDraftByJobNo = useCallback((jobNo) => {
     const normalizedJobNo = (jobNo || "").trim();
     if (!normalizedJobNo) {
       return;
@@ -286,7 +261,6 @@ export const EditComponent = ({ selectedJobNo }) => {
       return;
     }
 
-    setCurrBl(curr);
     setConsignee(curr.Consignee ? curr.Consignee : "");
     setConsignor(curr.Consignor ? curr.Consignor : "");
     setNotifyParty(curr.NotifyParty ? curr.NotifyParty : "");
@@ -329,6 +303,23 @@ export const EditComponent = ({ selectedJobNo }) => {
     );
     setText("Edit");
     toast("Fetched Sucessfully");
+  }, [BlDrafts]);
+
+  useEffect(() => {
+    if (selectedJobNo) {
+      setSearchText(selectedJobNo);
+      loadDraftByJobNo(selectedJobNo);
+    }
+  }, [selectedJobNo, loadDraftByJobNo]);
+  const handleBl = () => {
+    setTypeText("bl");
+  };
+
+  const handleOriginal = () => {
+    setTypeText("original");
+  };
+  const handleNegotiable = () => {
+    setTypeText("");
   };
 
   const handleSubmit = () => {
