@@ -80,6 +80,21 @@ const persistUsers = (users) => {
   localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
 };
 
+const persistCredential = (email, password) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail || !String(password || "").trim()) {
+    return;
+  }
+
+  try {
+    const existing = JSON.parse(localStorage.getItem("blueDiamondAuthCredentials") || "{}");
+    const next = { ...existing, [normalizedEmail]: password };
+    localStorage.setItem("blueDiamondAuthCredentials", JSON.stringify(next));
+  } catch (error) {
+    console.error("Unable to persist auth credentials", error);
+  }
+};
+
 const syncAppUserRecord = async (email, role, password = "") => {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) {
@@ -153,8 +168,29 @@ export const AuthContextProvider = ({ children }) => {
       return { user: { email: normalizedEmail, uid: `local-${normalizedEmail}`, role } };
     }
 
+    const previousUser = auth.currentUser;
+    const previousUserEmail = normalizeEmail(previousUser?.email || "");
+    const previousPassword = previousUserEmail
+      ? JSON.parse(localStorage.getItem("blueDiamondAuthCredentials") || "{}")?.[previousUserEmail]
+      : "";
+
     const result = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
     await syncAppUserRecord(normalizedEmail, role, password);
+
+    if (previousUserEmail && previousPassword) {
+      await signOut(auth);
+      await signInWithEmailAndPassword(auth, previousUserEmail, previousPassword);
+      const restoredUser = auth.currentUser;
+      if (restoredUser) {
+        const restoredSessionUser = {
+          ...restoredUser,
+          email: previousUserEmail,
+          role: determineUserRole(previousUserEmail, restoredUser?.role || "user"),
+        };
+        setUser(restoredSessionUser);
+      }
+    }
+
     return result;
   };
 
@@ -254,6 +290,7 @@ export const AuthContextProvider = ({ children }) => {
         persistUsers(nextUsers);
       }
 
+      persistCredential(normalizedEmail, password);
       const sessionUser = {
         email: normalizedEmail,
         uid: `local-${normalizedEmail}`,
@@ -273,6 +310,7 @@ export const AuthContextProvider = ({ children }) => {
 
     try {
       const result = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      persistCredential(normalizedEmail, password);
       const sessionUser = {
         ...result.user,
         email: normalizedEmail,
@@ -302,7 +340,13 @@ export const AuthContextProvider = ({ children }) => {
       const storedUser = localStorage.getItem("blueDiamondSession");
       if (storedUser) {
         try {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          const normalizedEmail = normalizeEmail(parsedUser?.email || "");
+          setUser({
+            ...parsedUser,
+            email: normalizedEmail,
+            role: determineUserRole(normalizedEmail, parsedUser?.role || "user"),
+          });
         } catch (error) {
           localStorage.removeItem("blueDiamondSession");
         }
@@ -311,7 +355,17 @@ export const AuthContextProvider = ({ children }) => {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      if (!currentUser) {
+        setUser(null);
+        return;
+      }
+
+      const normalizedEmail = normalizeEmail(currentUser.email || "");
+      setUser({
+        ...currentUser,
+        email: normalizedEmail,
+        role: determineUserRole(normalizedEmail, currentUser?.role || "user"),
+      });
     });
     return () => {
       unsubscribe();
