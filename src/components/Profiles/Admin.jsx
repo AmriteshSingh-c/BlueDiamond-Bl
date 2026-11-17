@@ -129,6 +129,7 @@ const Admin = () => {
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [revisionDraft, setRevisionDraft] = useState(null);
   const [revisionComment, setRevisionComment] = useState("");
+  const [revisionRecipient, setRevisionRecipient] = useState("");
   const [pendingPage, setPendingPage] = useState(1);
   const [approvedPage, setApprovedPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -344,6 +345,14 @@ const Admin = () => {
     approvedPage * pageSize
   );
 
+  const activeRevisionUsers = (localUsers || [])
+    .filter((entry) => {
+      const email = (entry?.email || "").trim();
+      const role = (entry?.role || "").trim().toLowerCase();
+      return email && role !== "admin" && email.toLowerCase() !== "admin@gmail.com";
+    })
+    .map((entry) => entry.email);
+
   const handleSign = async () => {
     if (currJob.JobNo) {
       const payload = { ...currJob, sign: "true" };
@@ -405,13 +414,19 @@ const Admin = () => {
       return;
     }
 
-    const recipient = draft.createdBy || draft.lastEdited || "normal@gmail.com";
+    const recipient = revisionRecipient || activeRevisionUsers[0] || draft.createdBy || draft.lastEdited || "normal@gmail.com";
+    if (!recipient || !activeRevisionUsers.includes(recipient)) {
+      toast("Select an active user to send the revision request to.");
+      return;
+    }
+
     const notificationId = `${draft.JobNo}-revision-${Date.now()}`;
     const payload = {
       ...draft,
       sign: "false",
       status: "revision_requested",
       revisionComment: revisionComment.trim(),
+      revisionAssignedTo: recipient,
       lastEdited: user ? user.email : "admin",
       updatedAt: new Date().toISOString(),
     };
@@ -440,6 +455,7 @@ const Admin = () => {
       setShowRevisionModal(false);
       setRevisionDraft(null);
       setRevisionComment("");
+      setRevisionRecipient("");
       toast(`Revision requested for ${draft.JobNo}`);
       return;
     }
@@ -462,6 +478,7 @@ const Admin = () => {
     setShowRevisionModal(false);
     setRevisionDraft(null);
     setRevisionComment("");
+    setRevisionRecipient("");
     toast(`Revision requested for ${draft.JobNo}`);
   };
 
@@ -941,8 +958,12 @@ const Admin = () => {
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      const preferredRecipient = activeRevisionUsers.includes(draft.createdBy || draft.lastEdited)
+                                        ? draft.createdBy || draft.lastEdited
+                                        : activeRevisionUsers[0] || "";
                                       setRevisionDraft(draft);
                                       setRevisionComment(draft.revisionComment || "");
+                                      setRevisionRecipient(preferredRecipient);
                                       setShowRevisionModal(true);
                                     }}
                                     className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
@@ -1052,6 +1073,27 @@ const Admin = () => {
                 </div>
 
                 <label className="block text-sm font-medium text-slate-700">
+                  <span className="mb-2 block">Select active user</span>
+                  <select
+                    value={revisionRecipient}
+                    onChange={(event) => setRevisionRecipient(event.target.value)}
+                    className="input-field"
+                    disabled={!activeRevisionUsers.length}
+                  >
+                    {!activeRevisionUsers.length ? (
+                      <option value="">No active users available</option>
+                    ) : (
+                      <>
+                        <option value="">Choose a recipient</option>
+                        {activeRevisionUsers.map((email) => (
+                          <option key={email} value={email}>{email}</option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
                   <span className="mb-2 block">Comments or suggestions</span>
                   <textarea
                     rows="5"
@@ -1063,8 +1105,18 @@ const Admin = () => {
                 </label>
 
                 <div className="flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowRevisionModal(false)} className="secondary-button">Cancel</button>
-                  <button type="button" onClick={() => handleSendForRevision(revisionDraft)} className="primary-button">Send for revise</button>
+                  <button type="button" onClick={() => {
+                    setShowRevisionModal(false);
+                    setRevisionRecipient("");
+                  }} className="secondary-button">Cancel</button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendForRevision(revisionDraft)}
+                    className="primary-button disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!revisionRecipient || !activeRevisionUsers.includes(revisionRecipient)}
+                  >
+                    Send for revise
+                  </button>
                 </div>
               </div>
             </div>
