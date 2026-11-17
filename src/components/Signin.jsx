@@ -16,8 +16,9 @@ const Signin = () => {
     try {
       const result = await signIn(email, password);
       const loggedInUser = result?.user || { email, role: email === 'admin@gmail.com' ? 'admin' : 'user' };
+      const userRole = loggedInUser.role || (loggedInUser.email === 'admin@gmail.com' ? 'admin' : 'user');
 
-      if (loggedInUser.role === 'admin') {
+      if (userRole === 'admin') {
         navigate('/admin');
       } else {
         navigate('/user');

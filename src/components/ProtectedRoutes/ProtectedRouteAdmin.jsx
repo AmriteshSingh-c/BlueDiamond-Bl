@@ -5,7 +5,7 @@ import { UserAuth } from '../../context/AuthContext';
 const ProtectedRouteAdmin = ({ children }) => {
   const { user } = UserAuth();
 
-  if (!user||user.email!=="admin@gmail.com") {
+  if (!user || (user.role !== "admin" && user.email !== "admin@gmail.com")) {
     return <Navigate to='/' />;
   }
   return children;

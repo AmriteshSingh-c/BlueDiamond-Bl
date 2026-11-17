@@ -79,6 +79,22 @@ const persistUsers = (users) => {
   localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
 };
 
+const determineUserRole = (email, fallback = "user") => {
+  const normalizedEmail = normalizeEmail(email);
+  const storedUsers = getStoredUsers();
+  const storedMatch = storedUsers.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
+
+  if (storedMatch?.role) {
+    return storedMatch.role;
+  }
+
+  if (normalizedEmail === "admin@gmail.com") {
+    return "admin";
+  }
+
+  return fallback;
+};
+
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
@@ -151,7 +167,7 @@ export const AuthContextProvider = ({ children }) => {
       throw new Error("Email and password are required.");
     }
 
-    if (!auth) {
+    const loginWithLocalFallback = async () => {
       const users = getStoredUsers();
       let record = users.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
       const passwordHash = await hashPassword(password);
@@ -166,13 +182,13 @@ export const AuthContextProvider = ({ children }) => {
       }
 
       if (!record) {
-        throw new Error("Invalid email or password.");
+        return null;
       }
 
       if (record.passwordHash !== passwordHash) {
         const defaultUser = DEFAULT_USERS.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
         if (!defaultUser || defaultUser.passwordHash !== passwordHash) {
-          throw new Error("Invalid email or password.");
+          return null;
         }
 
         const nextUsers = [...users.filter((entry) => normalizeEmail(entry.email) !== normalizedEmail), { ...record, passwordHash }];
@@ -182,15 +198,36 @@ export const AuthContextProvider = ({ children }) => {
       const sessionUser = {
         email: normalizedEmail,
         uid: `local-${normalizedEmail}`,
-        role: record.role || "user",
+        role: determineUserRole(normalizedEmail, record.role || "user"),
       };
       setUser(sessionUser);
       return { user: sessionUser };
+    };
+
+    if (!auth) {
+      const fallbackResult = await loginWithLocalFallback();
+      if (fallbackResult) {
+        return fallbackResult;
+      }
+      throw new Error("Invalid email or password.");
     }
 
-    const result = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-    setUser(result.user);
-    return result;
+    try {
+      const result = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      const sessionUser = {
+        ...result.user,
+        email: normalizedEmail,
+        role: determineUserRole(normalizedEmail, result.user?.role || "user"),
+      };
+      setUser(sessionUser);
+      return { ...result, user: sessionUser };
+    } catch (error) {
+      const fallbackResult = await loginWithLocalFallback();
+      if (fallbackResult) {
+        return fallbackResult;
+      }
+      throw error;
+    }
   };
 
   const logout = () => {
