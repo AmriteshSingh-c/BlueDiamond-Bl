@@ -43,6 +43,8 @@ export const EditComponent = ({ selectedJobNo }) => {
   const [hidden, setHidden] = useState(false);
   const [typeText, setTypeText] = useState("");
   const [sign, setSign] = useState(false);
+  const [showSignature, setShowSignature] = useState(true);
+  const [showStamp, setShowStamp] = useState(true);
   const [text, setText] = useState("New");
   const [attachedSheets, setAttachedSheets] = useState([
     { id: 1, marks: "", description: "" },
@@ -287,6 +289,8 @@ export const EditComponent = ({ selectedJobNo }) => {
     setShipmentRef(curr.ShipmentRef ? curr.ShipmentRef : "");
     setJobNO(curr.JobNo ? curr.JobNo : "");
     setSign(curr.sign ? curr.sign : "false");
+    setShowSignature(curr.showSignature !== undefined ? curr.showSignature : true);
+    setShowStamp(curr.showStamp !== undefined ? curr.showStamp : true);
     setTypeText(curr.typeText ? curr.typeText : "");
     setAttachedSheets(
       Array.isArray(curr.attachedSheets) && curr.attachedSheets.length
@@ -364,6 +368,8 @@ export const EditComponent = ({ selectedJobNo }) => {
       ShipmentRef: ShipmentRef,
       JobNo: JobNo,
       sign: sign,
+      showSignature: showSignature,
+      showStamp: showStamp,
       lastEdited: user ? user.email : "demo-user",
       typeText: typeText,
       attachedSheets: normalizedAttachedSheets,
@@ -926,6 +932,8 @@ export const EditComponent = ({ selectedJobNo }) => {
                   JobNo={JobNo}
                   hidden={hidden}
                   sign={sign}
+                  showSignature={showSignature}
+                  showStamp={showStamp}
                   typeText={typeText}
                   ref={componentRef}
                 />
@@ -947,6 +955,20 @@ export const EditComponent = ({ selectedJobNo }) => {
               </button>
               <button onClick={handleNegotiable} className="secondary-button">
                 Negotiable
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSignature((prev) => !prev)}
+                className="secondary-button"
+              >
+                {showSignature ? "Hide sign" : "Show sign"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStamp((prev) => !prev)}
+                className="secondary-button"
+              >
+                {showStamp ? "Hide stamp" : "Show stamp"}
               </button>
             </div>
 
@@ -973,6 +995,8 @@ export const EditComponent = ({ selectedJobNo }) => {
                     PortOfLoading={PortOfLoading}
                     PortOfDischarge={PortOfDischarge}
                     sign={sign}
+                    showSignature={showSignature}
+                    showStamp={showStamp}
                     sheetNumber={index + 1}
                     sheetTotal={attachedSheets.length}
                   />

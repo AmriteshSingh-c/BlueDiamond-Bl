@@ -11,7 +11,10 @@ export const AttachedSheet = React.forwardRef((props, ref) => {
     sign,
     sheetNumber = 1,
     sheetTotal = 1,
+    showSignature = true,
+    showStamp = true,
   } = props;
+  const isApproved = sign === true || sign === "true";
   return (
     <div
       ref={ref}
@@ -55,9 +58,14 @@ export const AttachedSheet = React.forwardRef((props, ref) => {
       >
         {attachedSheetDescription}
       </div>
-      {sign === "true" && (
-        <div className="bg-blue-500 text-white absolute top-[930px] left-[550px]">
-          <img src={signImg} className="w-full h-[85px] " alt="unable"></img>
+      {isApproved && showStamp && (
+        <div className="absolute left-[510px] top-[860px] -rotate-12 border-4 border-red-500/70 bg-white/80 px-4 py-2 text-[24px] font-black uppercase tracking-[0.18em] text-red-500/70">
+          Approved
+        </div>
+      )}
+      {isApproved && showSignature && (
+        <div className="absolute left-[545px] top-[930px] bg-white/80">
+          <img src={signImg} className="h-[85px] w-auto" alt="approval signature"></img>
         </div>
       )}
     </div>

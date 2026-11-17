@@ -1,5 +1,5 @@
 /*eslint-disable*/
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Account from "../Account";
 import { UserAuth } from "../../context/AuthContext";
 import { onSnapshot, collection, setDoc, doc, getDoc } from "firebase/firestore";
@@ -11,30 +11,57 @@ import AdminList from "../AdminList";
 import { AttachedSheet } from "../AttachedSheet/AttachedSheet";
 
 const DEFAULT_LAYOUT = {
-  MTDNo: { top: 48, left: 600 },
-  ShipmentRef: { top: 72, left: 600 },
-  Consignor: { top: 72, left: 20 },
-  Consignee: { top: 157, left: 20 },
-  NotifyParty: { top: 239, left: 20 },
-  PlaceOfAcceptance: { top: 325, left: 20 },
-  DateOfAcceptance: { top: 325, left: 250 },
-  PortOfLoading: { top: 365, left: 20 },
-  PortOfDischarge: { top: 365, left: 203 },
-  VesselVoyage: { top: 403, left: 20 },
-  PlaceOfDelivery: { top: 440, left: 20 },
-  DateOfDelivery: { top: 440, left: 250 },
-  ModeOfTransport: { top: 440, left: 400 },
-  Route: { top: 440, left: 590 },
-  ContainerNo: { top: 488, left: 20 },
-  Marks: { top: 488, left: 135 },
-  Description: { top: 492, left: 285 },
-  GrossWeight: { top: 486, left: 555 },
-  Measurement: { top: 486, left: 685 },
-  DeliveryAgent: { top: 874, left: 20 },
-  FreightAmount: { top: 872, left: 400 },
-  NumberOfBl: { top: 874, left: 575 },
-  PlaceAndDate: { top: 873, left: 635 },
-  FreightPayable: { top: 930, left: 400 },
+  MTDNo: { top: 48, left: 600, width: 160, height: 22 },
+  ShipmentRef: { top: 72, left: 600, width: 190, height: 22 },
+  Consignor: { top: 72, left: 20, width: 390, height: 26 },
+  Consignee: { top: 157, left: 20, width: 390, height: 28 },
+  NotifyParty: { top: 239, left: 20, width: 390, height: 28 },
+  PlaceOfAcceptance: { top: 325, left: 20, width: 220, height: 26 },
+  DateOfAcceptance: { top: 325, left: 250, width: 170, height: 26 },
+  PortOfLoading: { top: 365, left: 20, width: 170, height: 26 },
+  PortOfDischarge: { top: 365, left: 203, width: 170, height: 26 },
+  VesselVoyage: { top: 403, left: 20, width: 330, height: 26 },
+  PlaceOfDelivery: { top: 440, left: 20, width: 220, height: 26 },
+  DateOfDelivery: { top: 440, left: 250, width: 170, height: 26 },
+  ModeOfTransport: { top: 440, left: 400, width: 130, height: 26 },
+  Route: { top: 440, left: 590, width: 150, height: 26 },
+  ContainerNo: { top: 488, left: 20, width: 190, height: 26 },
+  Marks: { top: 488, left: 135, width: 250, height: 26 },
+  Description: { top: 492, left: 285, width: 420, height: 26 },
+  GrossWeight: { top: 486, left: 555, width: 120, height: 26 },
+  Measurement: { top: 486, left: 685, width: 120, height: 26 },
+  DeliveryAgent: { top: 874, left: 20, width: 260, height: 26 },
+  FreightAmount: { top: 872, left: 400, width: 130, height: 26 },
+  NumberOfBl: { top: 874, left: 575, width: 130, height: 26 },
+  PlaceAndDate: { top: 873, left: 635, width: 170, height: 26 },
+  FreightPayable: { top: 930, left: 400, width: 180, height: 26 },
+};
+
+const TEMPLATE_SAMPLE_VALUES = {
+  MTDNo: "MTD-2775",
+  ShipmentRef: "SH-2775",
+  Consignor: "BlueDiamond Logistics Pvt. Ltd.",
+  Consignee: "North Harbor Traders",
+  NotifyParty: "OceanOps Ltd",
+  PlaceOfAcceptance: "Mumbai",
+  DateOfAcceptance: "21/08/2028",
+  PortOfLoading: "Jebel Ali",
+  PortOfDischarge: "Hamburg",
+  VesselVoyage: "MV Horizon 09",
+  PlaceOfDelivery: "Hamburg Port",
+  DateOfDelivery: "30/08/2028",
+  ModeOfTransport: "Sea",
+  Route: "Via Suez",
+  ContainerNo: "CMAU 612345-7",
+  Marks: "BLD-2775/01",
+  Description: "Machinery and spare components",
+  GrossWeight: "12,470 KG",
+  Measurement: "18.50 CBM",
+  DeliveryAgent: "BlueOcean Freight Co.",
+  FreightAmount: "USD 4,850",
+  NumberOfBl: "03",
+  PlaceAndDate: "Mumbai / 21-08-2028",
+  FreightPayable: "Collect",
 };
 
 const DEMO_LOCAL_DRAFTS = [
@@ -85,6 +112,8 @@ const DEMO_LOCAL_DRAFTS = [
     MTDNo: "MTD-1038",
     ShipmentRef: "SH-1038",
     sign: "true",
+    showSignature: true,
+    showStamp: true,
     status: "approved",
     approvedBy: "admin@gmail.com",
     approvedAt: new Date(Date.now() - 172800000).toISOString(),
@@ -122,6 +151,7 @@ const Admin = () => {
   const [templateImage, setTemplateImage] = useState("");
   const [templateLayout, setTemplateLayout] = useState(DEFAULT_LAYOUT);
   const [selectedTemplateField, setSelectedTemplateField] = useState("Consignor");
+  const previewContainerRef = useRef(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [selectedApprovalJob, setSelectedApprovalJob] = useState(null);
   const [activeAdminSection, setActiveAdminSection] = useState("document-setup");
@@ -260,15 +290,59 @@ const Admin = () => {
 
   const moveTemplateField = (field, deltaLeft = 0, deltaTop = 0) => {
     setTemplateLayout((prev) => {
-      const current = prev[field] || DEFAULT_LAYOUT[field] || { top: 0, left: 0 };
+      const current = prev[field] || DEFAULT_LAYOUT[field] || { top: 0, left: 0, width: 120, height: 26 };
       return {
         ...prev,
         [field]: {
+          ...current,
           top: (current.top ?? 0) + deltaTop,
           left: (current.left ?? 0) + deltaLeft,
         },
       };
     });
+  };
+
+  const beginFieldInteraction = (field, mode, event) => {
+    if (!event) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const current = templateLayout[field] || DEFAULT_LAYOUT[field] || { top: 0, left: 0, width: 140, height: 28 };
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const initial = { ...current };
+
+    const handlePointerMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      setTemplateLayout((prev) => {
+        const next = prev[field] || DEFAULT_LAYOUT[field] || { top: 0, left: 0, width: 140, height: 28 };
+        const updated = { ...next };
+
+        if (mode === "move") {
+          updated.left = Math.max(0, (initial.left ?? 0) + deltaX);
+          updated.top = Math.max(0, (initial.top ?? 0) + deltaY);
+        } else {
+          updated.width = Math.max(80, (initial.width ?? 120) + deltaX);
+          updated.height = Math.max(18, (initial.height ?? 28) + deltaY);
+        }
+
+        return {
+          ...prev,
+          [field]: updated,
+        };
+      });
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    setSelectedTemplateField(field);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
   };
 
   const resetFieldLayout = (field) => {
@@ -355,7 +429,12 @@ const Admin = () => {
 
   const handleSign = async () => {
     if (currJob.JobNo) {
-      const payload = { ...currJob, sign: "true" };
+      const payload = {
+        ...currJob,
+        sign: "true",
+        showSignature: currJob.showSignature !== undefined ? currJob.showSignature : true,
+        showStamp: currJob.showStamp !== undefined ? currJob.showStamp : true,
+      };
 
       if (!db) {
         const nextDrafts = (getLocalDrafts() || []).map((entry) =>
@@ -389,6 +468,8 @@ const Admin = () => {
     const payload = {
       ...draft,
       sign: "true",
+      showSignature: draft.showSignature !== undefined ? draft.showSignature : true,
+      showStamp: draft.showStamp !== undefined ? draft.showStamp : true,
       status: "approved",
       approvedBy: user ? user.email : "admin",
       approvedAt: new Date().toISOString(),
@@ -711,7 +792,52 @@ const Admin = () => {
                       <button type="button" onClick={() => moveTemplateField(selectedTemplateField, 5, 0)} className="secondary-button !px-3 !py-2 text-xs">→</button>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+                    <div
+                      ref={previewContainerRef}
+                      className="relative mx-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-inner"
+                      style={{ width: "100%", maxWidth: "760px", aspectRatio: "21 / 29.7" }}
+                    >
+                      {templateImage ? (
+                        <img src={templateImage} alt="Bill template preview" className="h-full w-full object-contain" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+                          Upload a template image to begin.
+                        </div>
+                      )}
+
+                      {Object.keys(DEFAULT_LAYOUT).map((field) => {
+                        const bounds = templateLayout[field] || DEFAULT_LAYOUT[field];
+                        const isSelected = selectedTemplateField === field;
+
+                        return (
+                          <div
+                            key={field}
+                            onPointerDown={(event) => beginFieldInteraction(field, "move", event)}
+                            onClick={() => setSelectedTemplateField(field)}
+                            className={`absolute flex cursor-move flex-col justify-between overflow-hidden rounded-md border bg-white/85 px-2 py-1 shadow-md transition ${
+                              isSelected ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-300"
+                            }`}
+                            style={{
+                              top: `${bounds.top ?? 0}px`,
+                              left: `${bounds.left ?? 0}px`,
+                              width: `${bounds.width ?? 140}px`,
+                              height: `${bounds.height ?? 28}px`,
+                            }}
+                          >
+                            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">{field}</span>
+                            <span className="truncate text-[10px] text-slate-700">
+                              {TEMPLATE_SAMPLE_VALUES[field] || "Sample value"}
+                            </span>
+                            <div
+                              onPointerDown={(event) => beginFieldInteraction(field, "resize", event)}
+                              className="absolute -bottom-1 -right-1 h-3 w-3 cursor-se-resize rounded-full border border-slate-600 bg-white shadow-sm"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-2">
                       {Object.keys(DEFAULT_LAYOUT).map((field) => (
                         <div
                           key={field}
@@ -740,6 +866,24 @@ const Admin = () => {
                                 className="input-field !py-2 !px-2 text-xs"
                                 value={templateLayout[field]?.left ?? DEFAULT_LAYOUT[field].left}
                                 onChange={(e) => updateTemplateLayout(field, "left", e.target.value)}
+                              />
+                            </label>
+                            <label className="text-xs text-slate-600">
+                              <span className="mb-1 block">Width</span>
+                              <input
+                                type="number"
+                                className="input-field !py-2 !px-2 text-xs"
+                                value={templateLayout[field]?.width ?? DEFAULT_LAYOUT[field].width}
+                                onChange={(e) => updateTemplateLayout(field, "width", e.target.value)}
+                              />
+                            </label>
+                            <label className="text-xs text-slate-600">
+                              <span className="mb-1 block">Height</span>
+                              <input
+                                type="number"
+                                className="input-field !py-2 !px-2 text-xs"
+                                value={templateLayout[field]?.height ?? DEFAULT_LAYOUT[field].height}
+                                onChange={(e) => updateTemplateLayout(field, "height", e.target.value)}
                               />
                             </label>
                           </div>
@@ -1141,7 +1285,12 @@ const Admin = () => {
                     type="button"
                     onClick={async () => {
                       if (!db || !selectedApprovalJob.JobNo) return;
-                      await setDoc(doc(db, "bldraft", selectedApprovalJob.JobNo), { ...selectedApprovalJob, sign: "true" });
+                      await setDoc(doc(db, "bldraft", selectedApprovalJob.JobNo), {
+                        ...selectedApprovalJob,
+                        sign: "true",
+                        showSignature: selectedApprovalJob.showSignature !== undefined ? selectedApprovalJob.showSignature : true,
+                        showStamp: selectedApprovalJob.showStamp !== undefined ? selectedApprovalJob.showStamp : true,
+                      });
                       toast("Job approved and signed successfully");
                       closeApprovalModal();
                     }}

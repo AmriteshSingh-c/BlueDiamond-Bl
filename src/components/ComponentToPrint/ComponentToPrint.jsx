@@ -71,10 +71,13 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
     typeText,
     templateImage,
     layout,
+    showSignature = true,
+    showStamp = true,
   } = props;
 
   const [activeTemplate, setActiveTemplate] = useState(templateImage || img);
   const [activeLayout, setActiveLayout] = useState({ ...DEFAULT_LAYOUT, ...(layout || {}) });
+  const isApproved = sign === true || sign === "true";
 
   useEffect(() => {
     const currentLayout = { ...DEFAULT_LAYOUT, ...(layout || {}) };
@@ -103,10 +106,12 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
   }, [layout, templateImage]);
 
   const fieldPosition = (fieldName) => {
-    const position = activeLayout[fieldName] || DEFAULT_LAYOUT[fieldName] || { top: 0, left: 0 };
+    const position = activeLayout[fieldName] || DEFAULT_LAYOUT[fieldName] || { top: 0, left: 0, width: 180, height: 26 };
     return {
-      top: `${position.top}px`,
-      left: `${position.left}px`,
+      top: `${position.top ?? 0}px`,
+      left: `${position.left ?? 0}px`,
+      width: `${position.width ?? 180}px`,
+      height: `${position.height ?? 26}px`,
     };
   };
 
@@ -283,9 +288,14 @@ export const ComponentToPrint = React.forwardRef((props, ref) => {
       <div className="absolute" style={{ ...fieldPosition("FreightPayable") }}>
         <p>{FreightPayable}</p>
       </div>
-      {sign === "true" && (
-        <div className="bg-blue-500 text-white absolute top-[930px] left-[550px]">
-          <img src={signImg} className="w-full h-[85px] " alt="unable"></img>
+      {isApproved && showStamp && (
+        <div className="absolute left-[510px] top-[840px] -rotate-12 border-4 border-red-500/70 bg-white/70 px-4 py-2 text-[24px] font-black uppercase tracking-[0.2em] text-red-500/70">
+          Approved
+        </div>
+      )}
+      {isApproved && showSignature && (
+        <div className="absolute left-[545px] top-[920px] bg-white/80">
+          <img src={signImg} className="h-[85px] w-auto" alt="approval signature"></img>
         </div>
       )}
     </div>
